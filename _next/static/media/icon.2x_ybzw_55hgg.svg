@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Lazar Pavlović">
+  <!--
+    The site's own motif: the hero grid pulled inward around a glowing lens —
+    i.e. the cursor "dent". Hex values are the sRGB equivalents of the oklch
+    accents in globals.css (teal oklch(0.78 0.11 212), violet 0.78 0.11 288),
+    hardcoded because a favicon is rendered outside the app's CSS.
+  -->
+  <defs>
+    <linearGradient id="lens" x1="14" y1="14" x2="50" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#52CAE0" />
+      <stop offset="1" stop-color="#B4ACFA" />
+    </linearGradient>
+    <radialGradient id="bloom" cx="32" cy="32" r="23" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#52CAE0" stop-opacity=".45" />
+      <stop offset=".55" stop-color="#B4ACFA" stop-opacity=".18" />
+      <stop offset="1" stop-color="#B4ACFA" stop-opacity="0" />
+    </radialGradient>
+    <clipPath id="frame">
+      <rect width="64" height="64" rx="14" />
+    </clipPath>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="#0A0B0D" />
+
+  <g clip-path="url(#frame)">
+    <g fill="none" stroke="#333C48" stroke-width="2" stroke-linecap="round">
+      <path d="M12 2Q19 32 12 62" />
+      <path d="M52 2Q45 32 52 62" />
+      <path d="M2 12Q32 19 62 12" />
+      <path d="M2 52Q32 45 62 52" />
+    </g>
+    <circle cx="32" cy="32" r="23" fill="url(#bloom)" />
+    <circle cx="32" cy="32" r="14" fill="url(#lens)" />
+    <path
+      d="M24.5 26.5a11.5 11.5 0 0 1 14-3"
+      fill="none"
+      stroke="#FFFFFF"
+      stroke-opacity=".4"
+      stroke-width="2.2"
+      stroke-linecap="round"
+    />
+  </g>
+
+  <rect x=".5" y=".5" width="63" height="63" rx="13.5" fill="none" stroke="#23282E" />
+</svg>
