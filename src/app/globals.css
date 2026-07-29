@@ -1,26 +1,373 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Tailwind v4 config lives here (CSS-first config), not in a JS file.
+ * These are the single source of truth for the site's palette — reuse
+ * these tokens (bg-background, text-muted-300, border-border, etc.)
+ * instead of hardcoding hex values in components.
+ */
+@theme {
+  --color-background: #0a0b0d;
+  --color-surface: #0e1013;
+  --color-surface-2: #0b0d10;
+  --color-surface-hover: #0c0e11;
+  --color-foreground: #e8eaed;
+
+  /* Primary accent (teal) — CTAs, links, focus rings. */
+  --color-accent: oklch(0.78 0.11 212);
+  --color-accent-hover: oklch(0.85 0.1 212);
+  --color-accent-foreground: #06181f;
+
+  /* Secondary accent (violet) — hero headline, meta labels, org names, orbs. */
+  --color-accent-2: oklch(0.78 0.11 288);
+  --color-accent-2-hover: oklch(0.85 0.1 288);
+
+  /* Hero grid line color. */
+  --color-grid-line: #20262e;
+
+  --color-border: #1e2227;
+  --color-border-subtle: #1b1f24;
+  --color-border-faint: #191d22;
+  --color-border-strong: #23282e;
+  --color-border-button: #2a3037;
+  --color-border-hover: #39414a;
+  --color-border-hover-strong: #4a525b;
+
+  --color-muted-100: #d6dadf;
+  --color-muted-150: #d2d7dc;
+  --color-muted-200: #a7aeb6;
+  --color-muted-300: #99a0a9;
+  --color-muted-400: #9aa1aa;
+  --color-muted-500: #8a9099;
+  --color-muted-600: #7c838c;
+  --color-muted-700: #6e757e;
+  --color-muted-800: #5f666f;
+  --color-muted-900: #5c636c;
+  --color-muted-950: #4e555e;
+
+  --font-sans: var(--font-space-grotesk), Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-background);
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+
+.animate-blink {
+  animation: blink 2.4s ease-in-out infinite;
+}
+
+/* ─── Hero: headline entrance ─────────────────────────────────────────────── */
+
+@keyframes riseIn {
+  from {
+    transform: translateY(112%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Each headline line sits in an overflow-hidden mask so it slides up from
+   behind its own baseline. The padding-bottom keeps descenders from clipping. */
+.hero-line-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.16em;
+}
+
+.hero-line {
+  display: block;
+  animation: riseIn 1s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+/* ─── Hero: animated backdrop (grid, glow orbs, light beam) ───────────────── */
+
+@keyframes gridDrift {
+  from {
+    background-position:
+      0 0,
+      0 0;
+  }
+  to {
+    background-position:
+      0 -40px,
+      -40px 0;
+  }
+}
+
+@keyframes glowBreathe {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translate(-14%, 4%) scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(14%, -10%) scale(1.22);
+  }
+}
+
+@keyframes beam {
+  0% {
+    transform: translateX(-60%) skewX(-14deg);
+    opacity: 0;
+  }
+  12%,
+  88% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateX(160%) skewX(-14deg);
+    opacity: 0;
+  }
+}
+
+@keyframes hairSweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/*
+ * Registered so `--dent` can be *transitioned*. Both the hole in the base grid
+ * and the reveal of the magnified copy are derived from it, so interpolating it
+ * grows/shrinks the whole effect as one piece on pointer enter/leave.
+ */
+@property --dent {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+/*
+ * Cursor-tracked "dent". `--mx`/`--my` are pointer coords (px, relative to the
+ * hero) written by HeroBackdrop on pointermove; `--dent` (0→1) fades the effect
+ * in and out. Everything below reads those three variables, so the whole
+ * interaction is GPU-composited CSS — no React re-render per frame.
+ */
+.hero-backdrop {
+  --mx: 50%;
+  --my: 40%;
+  --dent: 0;
+  /*
+   * Radius collapses to ~0 when idle, which removes the effect entirely. The
+   * epsilon keeps the circle non-degenerate: a zero-radius radial-gradient is
+   * spec'd to paint its last stop everywhere, and leaning on that would make
+   * the whole grid hinge on one edge case.
+   */
+  --dent-r: calc(var(--dent) * 130px + 0.01px);
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition: --dent 0.45s ease;
+}
+
+/*
+ * Carries the page vignette for both grid layers at once. Nesting the two masks
+ * (vignette on the wrapper, dent mask on each child) multiplies them reliably —
+ * deliberately avoids stacking them as two `mask-image` layers, since
+ * `mask-composite: intersect` on the bottom layer composites against a
+ * transparent backdrop and can blank the whole mask.
+ *
+ * Inset by -40px so the grid drift never exposes an edge; children fill this
+ * box, which is why pointer coords below need the matching +40px offset.
+ */
+.hero-grid-layer {
+  position: absolute;
+  inset: -40px;
+  mask-image: radial-gradient(130% 110% at 25% 35%, #000 10%, transparent 85%);
+  -webkit-mask-image: radial-gradient(130% 110% at 25% 35%, #000 10%, transparent 85%);
+}
+
+.hero-grid,
+.hero-grid-dent {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--color-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-grid-line) 1px, transparent 1px);
+  background-size:
+    40px 40px,
+    40px 40px;
+  /* Both layers drift together, so they stay one continuous surface. */
+  animation: gridDrift 5s linear infinite;
+}
+
+/*
+ * Base grid, with a soft hole punched out under the cursor. The hole is what
+ * makes this a dent rather than a second grid layered on top — the magnified
+ * copy below fills exactly the area removed here.
+ */
+.hero-grid {
+  mask-image: radial-gradient(
+    circle var(--dent-r) at calc(var(--mx) + 40px) calc(var(--my) + 40px),
+    transparent 0%,
+    rgba(0, 0, 0, 0.45) 55%,
+    #000 100%
+  );
+  -webkit-mask-image: radial-gradient(
+    circle var(--dent-r) at calc(var(--mx) + 40px) calc(var(--my) + 40px),
+    transparent 0%,
+    rgba(0, 0, 0, 0.45) 55%,
+    #000 100%
+  );
+}
+
+/*
+ * The same grid, magnified from the pointer and shown only inside that hole.
+ * Its mask stops mirror the hole's (0/0.45/1 vs 1/0.55/0) so the two sum to a
+ * constant — no seam and no brightness step where they meet.
+ */
+.hero-grid-dent {
+  transform: scale(1.18);
+  transform-origin: calc(var(--mx) + 40px) calc(var(--my) + 40px);
+  mask-image: radial-gradient(
+    circle var(--dent-r) at calc(var(--mx) + 40px) calc(var(--my) + 40px),
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 55%,
+    transparent 100%
+  );
+  -webkit-mask-image: radial-gradient(
+    circle var(--dent-r) at calc(var(--mx) + 40px) calc(var(--my) + 40px),
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 55%,
+    transparent 100%
+  );
+}
+
+/* A whisper of accent light pooling in the dent. Kept very low-contrast on
+   purpose — the stretched grid lines already carry the depth cue, so a strong
+   bloom or a dark rim here just reads as a blotch. */
+.hero-dent-shade {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle calc(var(--dent-r) * 1.2) at var(--mx) var(--my),
+    color-mix(in oklch, var(--color-accent-2) 7%, transparent) 0%,
+    transparent 72%
+  );
+  opacity: var(--dent);
+}
+
+.hero-orb {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.hero-orb-teal {
+  width: 640px;
+  height: 640px;
+  left: 46%;
+  top: -24%;
+  filter: blur(24px);
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--color-accent) 34%, transparent) 0%,
+    transparent 66%
+  );
+  animation: glowBreathe 8s ease-in-out infinite;
+}
+
+.hero-orb-violet {
+  width: 520px;
+  height: 520px;
+  left: 66%;
+  top: 26%;
+  filter: blur(28px);
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--color-accent-2) 34%, transparent) 0%,
+    transparent 66%
+  );
+  animation: glowBreathe 10s ease-in-out infinite 1.5s;
+}
+
+.hero-beam {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 180px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--color-accent) 12%, transparent),
+    transparent
+  );
+  animation: beam 9s linear infinite;
+}
+
+/* Gradient hairline along the hero's bottom edge, with a highlight sweeping
+   across it — replaces the plain 1px section divider. */
+.hero-hairline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    var(--color-accent) 0%,
+    var(--color-accent-2) 42%,
+    var(--color-border-subtle) 78%
+  );
+}
+
+.hero-hairline::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+  animation: hairSweep 3.6s ease-in-out infinite;
+}
+
+/*
+ * Respect the OS "reduce motion" setting: all *decorative* motion stops, and the
+ * cursor dent is removed entirely. Listed explicitly rather than as a blanket
+ * `* { animation: none }` so functional feedback — notably the loader spinner —
+ * keeps animating, since a frozen spinner reads as a hung page.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-blink,
+  .hero-line,
+  .hero-grid,
+  .hero-grid-dent,
+  .hero-orb-teal,
+  .hero-orb-violet,
+  .hero-beam,
+  .hero-hairline::after {
+    animation: none !important;
+  }
+
+  .hero-grid-dent,
+  .hero-dent-shade {
+    display: none;
+  }
 }
